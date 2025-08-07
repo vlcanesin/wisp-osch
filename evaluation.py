@@ -229,8 +229,9 @@ if __name__ == "__main__":
             dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
     # Prepare to write on a CSV file
-    csv_path = args.csvdir + f"evaluation-{args.dataset}.csv"
-    fieldnames = ["timestamp", "name", "num-inference-steps", "inference-time", "peak-gpu-memory", "fid"] 
+    fieldnames = ["timestamp", "name", "num-inference-steps", "inference-time", "peak-gpu-memory", "fid"]
+    os.makedirs(args.csvdir, exist_ok=True)
+    csv_path = os.path.join(args.csvdir, f"evaluation-{args.dataset}.csv")
     write_header = not os.path.exists(csv_path)
 
     # Pipeline configurations
