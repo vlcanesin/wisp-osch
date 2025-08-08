@@ -4,6 +4,10 @@ The code in this repository can be used to calculate the FID scores of different
 - `./diffusers` : A custom (local) version of the HuggingFace diffusers library containing several additional schedulers
 - `evaluation.py` : The main evaluation script
 
+## Introduced Solvers 
+Inside `./diffusers/schedulers`
+- RungeKuttaScheduler: solvers of order p=1..4, `edm`, `time scheduler`, `solver order scheduler`
+
 ## Requirements
 
 1. Create a new virtual environment with the requirements listed in `requirements.txt` in your desired directory:
