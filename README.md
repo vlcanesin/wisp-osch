@@ -6,8 +6,13 @@ The code in this repository can be used to calculate the FID scores of different
 
 ## Introduced Solvers 
 Inside `./diffusers/schedulers`
-- RungeKuttaScheduler: solvers of order p=1..4, `edm`, `time scheduler`, `solver order scheduler`
-
+- `scheduling_runge_kutta.py`: RungeKuttaScheduler, fixed-step solvers of order p=1..4, `edm` time scheduler, `solver order scheduler`
+- `scheduling_adaptive_runge_kutta.py`: AdaptiveHeunScheduler, p=2
+- `scheduling_parallel_runge_kutta.py`: ParallelRungeKuttaScheduler solvers of order p=1..4, with approximation of `x` to make them parallelizable.
+- `scheduling_exp_runge_kutta.py`: ExpRungeKuttaScheduler of order p=4,5 from the paper (experimental version)
+- `scheduling_dpm_adaptive_ringe_kutta.py`: DPMAdaptiveHeunScheduler, based on adaptive step size selection as in DPM paper with Heun scheduler solver (experimental version)
+- `schseduling_dpm_runge_kutta.py`: DPMRungeKuttaScheduler, RK solver of order p=4, it uses ODE formulation (2.2, 2.3) from DPM solver paper (experimental, didn't work for some reason)
+  
 ## Requirements
 
 1. Create a new virtual environment with the requirements listed in `requirements.txt` in your desired directory:
