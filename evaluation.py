@@ -180,6 +180,11 @@ if __name__ == "__main__":
     ExpRK4 = ExpRungeKuttaScheduler(num_train_timesteps=1000, order=4)
     ExpRK5 = ExpRungeKuttaScheduler(num_train_timesteps=1000, order=5)
 
+    ExpRK4_mid  = ExpRungeKuttaScheduler(num_train_timesteps=1000, order=4, quadrature="midpoint")
+    ExpRK4_simp = ExpRungeKuttaScheduler(num_train_timesteps=1000, order=4, quadrature="simpson")
+    ExpRK5_mid  = ExpRungeKuttaScheduler(num_train_timesteps=1000, order=5, quadrature="midpoint")
+    ExpRK5_simp = ExpRungeKuttaScheduler(num_train_timesteps=1000, order=5, quadrature="simpson")
+
     # Create the pipelines
     if local_rank == 0:
         print("Creating pipelines")
@@ -202,6 +207,11 @@ if __name__ == "__main__":
     ExpRK4_pipe = RungeKuttaPipeline(unet=eps_unet, scheduler=ExpRK4).to("cuda", local_rank)
     ExpRK5_pipe = RungeKuttaPipeline(unet=eps_unet, scheduler=ExpRK5).to("cuda", local_rank)
 
+    ExpRK4_mid_pipe  = RungeKuttaPipeline(unet=eps_unet, scheduler=ExpRK4_mid).to("cuda", local_rank)
+    ExpRK4_simp_pipe = RungeKuttaPipeline(unet=eps_unet, scheduler=ExpRK4_simp).to("cuda", local_rank)
+    ExpRK5_mid_pipe  = RungeKuttaPipeline(unet=eps_unet, scheduler=ExpRK5_mid).to("cuda", local_rank)
+    ExpRK5_simp_pipe = RungeKuttaPipeline(unet=eps_unet, scheduler=ExpRK5_simp).to("cuda", local_rank)
+
     # Load the dataset
     batch_size = args.bsize * dist.get_world_size()
     dataloader = None
@@ -218,6 +228,7 @@ if __name__ == "__main__":
                 torchvision.transforms.ToTensor(),  # Convert to tensor (0, 1)
             ])
             dataset = torchvision.datasets.CIFAR10(root=args.datapath, train=True, download=True, transform=preprocess)
+            #dataset = torch.utils.data.Subset(dataset, range(1*batch_size))
             dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
         elif args.dataset == "LSUN-bedroom":
             preprocess = torchvision.transforms.Compose([
@@ -254,6 +265,11 @@ if __name__ == "__main__":
 
         "ExpRK4": ExpRK4_pipe,
         "ExpRK5": ExpRK5_pipe,
+
+        "ExpRK4_mid" : ExpRK4_mid_pipe,
+        "ExpRK4_simp": ExpRK4_simp_pipe,
+        "ExpRK5_mid" : ExpRK5_mid_pipe,
+        "ExpRK5_simp": ExpRK5_simp_pipe
     }
 
     # Run pipelines

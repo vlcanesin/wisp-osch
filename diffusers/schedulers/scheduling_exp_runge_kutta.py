@@ -6,14 +6,17 @@ class ExpRungeKuttaScheduler(SchedulerMixin):
     Implementation of the exponential methods from the paper:
     'Efficient exponential Runge-Kutta methods of high order: construction and implementation' 
     """
-    def __init__(self, num_train_timesteps=1000, beta_start=0.0001, beta_end=0.02, order=4):
+    def __init__(self, num_train_timesteps=1000, beta_start=0.0001, beta_end=0.02, order=4, quadrature="linear"):
         self.num_train_timesteps = num_train_timesteps
         self.betas = torch.linspace(beta_start, beta_end, num_train_timesteps)
         self.alphas = 1.0 - self.betas
         self.alpha_bars = torch.cumprod(self.alphas, dim=0)
-        if order not in [4, 5]:
+        if order not in [1, 4, 5]:
             raise ValueError(f"Order {order} not supported")
         self.order = order
+        if quadrature not in ["linear", "midpoint", "simpson"]:
+            raise ValueError(f"Quadrature {quadrature} not supported")
+        self.quadrature = quadrature
 
         # Parameters taken from the paper
         self.rk4c2 = 1/2
@@ -34,18 +37,6 @@ class ExpRungeKuttaScheduler(SchedulerMixin):
 
         # For the numerical stability of the phi functions
         self.EPS = 0.5
-
-        # self.history = {
-        #     "Un2":[],
-        #     "Un3":[],
-        #     "Un4":[],
-        #     "Un5":[],
-        #     "Un6":[],
-        #     "Un7":[],
-        #     "Un8":[],
-        #     "Un9":[],
-        #     "Un10":[]
-        # }
 
     def set_timesteps(self, num_inference_steps, device="cpu"):
         self.timesteps = torch.linspace(self.num_train_timesteps - 1, 0, num_inference_steps).to(device)
@@ -77,36 +68,54 @@ class ExpRungeKuttaScheduler(SchedulerMixin):
         slope = a[tu] - a[tl]
         return a[tl] + slope * (t - tl) 
 
+    def _A(self, t):
+        return -0.5 * self._interp1d(self.betas, 0, self.num_train_timesteps-1, t)
+    
+    def _g(self, t, sample, model):
+        bt = self._interp1d(self.betas, 0, self.num_train_timesteps-1, t)
+        abt = self._interp1d(self.alpha_bars, 0, self.num_train_timesteps-1, t)
+        return bt * model(sample,t).sample / (2 * torch.sqrt(1 - abt))
+
+    def _quad_A(self, t, h):
+        if self.quadrature == "midpoint":
+            return self._A(t+h/2)
+        elif self.quadrature == "simpson":
+            return 1/6 * (self._A(t) + 4*self._A(t+h/2) + self._A(t+h))
+        else:
+            return self._A(t)
+
+    def _expRK1s1(self, t, sample, model):
+        h = self.get_delta_t(t)
+        A = self._quad_A(t, h)
+
+        g0 = self._g(t, sample, model)
+        F = A * sample + g0
+
+        prev_sample = sample + self._phi_1(h*A)*h*F
+        return prev_sample
+
     def _expRK4s6(self, t, sample, model):
         h = self.get_delta_t(t)
-        A = -0.5 * self._interp1d(self.betas, 0, self.num_train_timesteps-1, t)
-
-        def g(t, sample):
-            bt = self._interp1d(self.betas, 0, self.num_train_timesteps-1, t)
-            abt = self._interp1d(self.alpha_bars, 0, self.num_train_timesteps-1, t)
-            return bt * model(sample,t).sample / (2 * torch.sqrt(1 - abt))
+        A = self._quad_A(t, h)
 
         # expRK4s6
-        g0 = g(t, sample)  # 1 NFE
+        g0 = self._g(t, sample, model)  # 1 NFE
         F = A * sample + g0
 
         Un2 = sample + self._phi_1(self.rk4c2*h*A)*self.rk4c2*h*F
-        # self.history["Un2"].append((Un2.mean(), Un2.var(unbiased=True),))
 
-        Dn2 = g(t + self.rk4c2*h, Un2) - g0  # 2 NFEs
+        Dn2 = self._g(t + self.rk4c2*h, Un2, model) - g0  # 2 NFEs
         Un3 = sample + \
               self._phi_1(self.rk4c3*h*A)*self.rk4c3*h*F + \
               self._phi_2(self.rk4c3*h*A)*self.rk4c3**2/self.rk4c2*h*Dn2
         Un4 = sample + \
               self._phi_1(self.rk4c4*h*A)*self.rk4c4*h*F + \
               self._phi_2(self.rk4c4*h*A)*self.rk4c4**2/self.rk4c2*h*Dn2
-        # self.history["Un3"].append((Un3.mean(), Un3.var(unbiased=True),))
-        # self.history["Un4"].append((Un4.mean(), Un4.var(unbiased=True),))
         
         # Both of these can be computed in parallel,
         # accounting for 1 sequential NFE
-        Dn3 = g(t + self.rk4c3*h, Un3) - g0  # 3 NFEs
-        Dn4 = g(t + self.rk4c4*h, Un4) - g0  # 4 NFEs 
+        Dn3 = self._g(t + self.rk4c3*h, Un3, model) - g0  # 3 NFEs
+        Dn4 = self._g(t + self.rk4c4*h, Un4, model) - g0  # 4 NFEs 
         Un5 = sample + \
               self._phi_1(self.rk4c5*h*A)*self.rk4c5*h*F + \
               self._phi_2(self.rk4c5*h*A)*self.rk4c5**2/(self.rk4c3-self.rk4c4)*h*(-self.rk4c4/self.rk4c3*Dn3 + self.rk4c3/self.rk4c4*Dn4) + \
@@ -115,13 +124,11 @@ class ExpRungeKuttaScheduler(SchedulerMixin):
               self._phi_1(self.rk4c6*h*A)*self.rk4c6*h*F + \
               self._phi_2(self.rk4c6*h*A)*self.rk4c6**2/(self.rk4c3-self.rk4c4)*h*(-self.rk4c4/self.rk4c3*Dn3 + self.rk4c3/self.rk4c4*Dn4) + \
               self._phi_3(self.rk4c6*h*A)*2*self.rk4c6**3/(self.rk4c3-self.rk4c4)*h*(1/self.rk4c3*Dn3 - 1/self.rk4c4*Dn4)
-        # self.history["Un5"].append((Un5.mean(), Un5.var(unbiased=True),))
-        # self.history["Un6"].append((Un6.mean(), Un6.var(unbiased=True),))
         
         # Both of these can be computed in parallel,
         # accounting for 1 sequential NFE
-        Dn5 = g(t + self.rk4c5*h, Un5) - g0  # 5 NFEs
-        Dn6 = g(t + self.rk4c6*h, Un6) - g0  # 6 NFEs
+        Dn5 = self._g(t + self.rk4c5*h, Un5, model) - g0  # 5 NFEs
+        Dn6 = self._g(t + self.rk4c6*h, Un6, model) - g0  # 6 NFEs
         prev_sample = sample + \
                       self._phi_1(h*A)*h*F + \
                       self._phi_2(h*A)*1/(self.rk4c5-self.rk4c6)*h*(-self.rk4c6/self.rk4c5*Dn5 + self.rk4c5/self.rk4c6*Dn6) + \
@@ -131,34 +138,26 @@ class ExpRungeKuttaScheduler(SchedulerMixin):
 
     def _expRK5s10(self, t, sample, model):
         h = self.get_delta_t(t)
-        A = -0.5 * self._interp1d(self.betas, 0, self.num_train_timesteps-1, t)
-
-        def g(t, sample):
-            bt = self._interp1d(self.betas, 0, self.num_train_timesteps-1, t)
-            abt = self._interp1d(self.alpha_bars, 0, self.num_train_timesteps-1, t)
-            return bt * model(sample,t).sample / (2 * torch.sqrt(1 - abt))
+        A = self._quad_A(t, h)
 
         # expRK5s10
-        g0 = g(t, sample)  # 1 NFE
+        g0 = self._g(t, sample, model)  # 1 NFE
         F = A * sample + g0
 
         Un2 = sample + self._phi_1(self.rk5c2*h*A)*self.rk5c2*h*F
-        # self.history["Un2"].append((Un2.mean(), Un2.var(unbiased=True),))
 
-        Dn2 = g(t + self.rk5c2*h, Un2) - g0  # 2 NFEs
+        Dn2 = self._g(t + self.rk5c2*h, Un2, model) - g0  # 2 NFEs
         Un3 = sample + \
               self._phi_1(self.rk5c3*h*A)*self.rk5c3*h*F + \
               self._phi_2(self.rk5c3*h*A)*self.rk5c3**2/self.rk5c2*h*Dn2
         Un4 = sample + \
               self._phi_1(self.rk5c4*h*A)*self.rk5c4*h*F + \
               self._phi_2(self.rk5c4*h*A)*self.rk5c4**2/self.rk5c2*h*Dn2
-        # self.history["Un3"].append((Un3.mean(), Un3.var(unbiased=True),))
-        # self.history["Un4"].append((Un4.mean(), Un4.var(unbiased=True),))
         
         # Both of these can be computed in parallel,
         # accounting for 1 sequential NFE
-        Dn3 = g(t + self.rk5c3*h, Un3) - g0  # 3 NFEs
-        Dn4 = g(t + self.rk5c4*h, Un4) - g0  # 4 NFEs 
+        Dn3 = self._g(t + self.rk5c3*h, Un3, model) - g0  # 3 NFEs
+        Dn4 = self._g(t + self.rk5c4*h, Un4, model) - g0  # 4 NFEs 
         coeff1 = self.rk5c4/(self.rk5c3*(self.rk5c4-self.rk5c3))
         coeff2 = self.rk5c3/(self.rk5c4*(self.rk5c3-self.rk5c4))
         coeff3 = 2/(self.rk5c3*(self.rk5c3-self.rk5c4))
@@ -175,15 +174,12 @@ class ExpRungeKuttaScheduler(SchedulerMixin):
               self._phi_1(self.rk5c7*h*A)*self.rk5c7*h*F + \
               self._phi_2(self.rk5c7*h*A)*self.rk5c7**2*h*(coeff1*Dn3+coeff2*Dn4) + \
               self._phi_3(self.rk5c7*h*A)*self.rk5c7**3*h*(coeff3*Dn3-coeff4*Dn4)
-        # self.history["Un5"].append((Un5.mean(), Un5.var(unbiased=True),))
-        # self.history["Un6"].append((Un6.mean(), Un6.var(unbiased=True),))
-        # self.history["Un7"].append((Un7.mean(), Un7.var(unbiased=True),))
 
         # All of these can be computed in parallel,
         # accounting for 1 sequential NFE
-        Dn5 = g(t + self.rk5c5*h, Un5) - g0  # 5 NFEs
-        Dn6 = g(t + self.rk5c6*h, Un6) - g0  # 6 NFEs 
-        Dn7 = g(t + self.rk5c7*h, Un7) - g0  # 7 NFEs
+        Dn5 = self._g(t + self.rk5c5*h, Un5, model) - g0  # 5 NFEs
+        Dn6 = self._g(t + self.rk5c6*h, Un6, model) - g0  # 6 NFEs 
+        Dn7 = self._g(t + self.rk5c7*h, Un7, model) - g0  # 7 NFEs
         d5 = self.rk5c5*(self.rk5c5-self.rk5c6)*(self.rk5c5-self.rk5c7)
         d6 = self.rk5c6*(self.rk5c6-self.rk5c5)*(self.rk5c6-self.rk5c7)
         d7 = self.rk5c7*(self.rk5c7-self.rk5c5)*(self.rk5c7-self.rk5c6)
@@ -211,15 +207,12 @@ class ExpRungeKuttaScheduler(SchedulerMixin):
               self._phi_2(self.rk5c10*h*A)*self.rk5c10**2*h*(a5*Dn5+a6*Dn6+a7*Dn7) + \
               self._phi_3(self.rk5c10*h*A)*self.rk5c10**3*h*(b5*Dn5-b6*Dn6-b7*Dn7) + \
               self._phi_4(self.rk5c10*h*A)*self.rk5c10**4*h*(g5*Dn5+g6*Dn6+g7*Dn7)
-        # self.history["Un8"].append((Un8.mean(), Un8.var(unbiased=True),))
-        # self.history["Un9"].append((Un9.mean(), Un9.var(unbiased=True),))
-        # self.history["Un10"].append((Un10.mean(), Un10.var(unbiased=True),))
-
+        
         # All of these can be computed in parallel,
         # accounting for 1 sequential NFE
-        Dn8 = g(t + self.rk5c8*h, Un8) - g0  # 8 NFEs
-        Dn9 = g(t + self.rk5c9*h, Un9) - g0  # 9 NFEs 
-        Dn10 = g(t + self.rk5c10*h, Un10) - g0  # 10 NFEs
+        Dn8 = self._g(t + self.rk5c8*h, Un8, model) - g0  # 8 NFEs
+        Dn9 = self._g(t + self.rk5c9*h, Un9, model) - g0  # 9 NFEs 
+        Dn10 = self._g(t + self.rk5c10*h, Un10, model) - g0  # 10 NFEs
         d8 = self.rk5c8*(self.rk5c8-self.rk5c9)*(self.rk5c8-self.rk5c10)
         d9 = self.rk5c9*(self.rk5c9-self.rk5c8)*(self.rk5c9-self.rk5c10)
         d10 = self.rk5c10*(self.rk5c10-self.rk5c8)*(self.rk5c10-self.rk5c9)
@@ -241,7 +234,9 @@ class ExpRungeKuttaScheduler(SchedulerMixin):
         return prev_sample
 
     def step(self, t, sample, model):
-        if self.order == 4:
+        if self.order == 1:
+            return SchedulerOutput(prev_sample=self._expRK1s1(t, sample, model))
+        elif self.order == 4:
             return SchedulerOutput(prev_sample=self._expRK4s6(t, sample, model))
         elif self.order == 5:
             return SchedulerOutput(prev_sample=self._expRK5s10(t, sample, model))

@@ -1,3 +1,6 @@
 __pycache__
 ddpm-bedroom-256
 lsun
+cifar10
+csv
+ddpm_ema_cifar10
