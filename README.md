@@ -1,8 +1,8 @@
 # FID-diffusers
 
-The code in this repository can be used to calculate the FID scores of different diffusion pipelines based on custom schedulers. It contains:
-- `./diffusers` : A custom (local) version of the HuggingFace diffusers library containing several additional schedulers
-- `evaluation.py` : The main evaluation script
+The code in this repository can be used to calculate the FID scores of different diffusion pipelines based on custom schedulers.
+- The solvers are all implemented in this fork: https://github.com/vlcanesin/diffusers. In order to install it, you can clone the repo and install the library in your environment using `pip install -e .`
+- Once the library is installed, you'll be able to execute `evaluation.py`, the main evaluation script.
 
 ## Introduced Solvers 
 Inside `./diffusers/schedulers`
