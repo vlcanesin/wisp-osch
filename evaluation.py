@@ -5,7 +5,16 @@ from torch.utils.data import DataLoader
 import torch.distributed as dist
 
 # Local version of the diffusers library
-from diffusers import UNet2DModel, RungeKuttaScheduler, DDPMScheduler, DDIMScheduler, DPMSolverSinglestepScheduler, ParallelRungeKuttaScheduler, ExpRungeKuttaScheduler
+from diffusers import (
+    UNet2DModel, 
+    RungeKuttaScheduler, 
+    DDPMScheduler, 
+    DDIMScheduler, 
+    DPMSolverSinglestepScheduler, 
+    ParallelRungeKuttaScheduler, 
+    ExpRungeKuttaScheduler,
+    DPMSolverComposedScheduler
+)
 
 import torch.nn.functional as F
 from torchmetrics.image.fid import FrechetInceptionDistance
@@ -164,6 +173,11 @@ if __name__ == "__main__":
         solver_order=3, algorithm_type="dpmsolver++", final_sigmas_type="sigma_min",
         lower_order_final=True
     )
+    DPMComposed = DPMSolverComposedScheduler(
+        num_train_timesteps=1000, prediction_type="epsilon",
+        solver_order=3, algorithm_type="dpmsolver++", final_sigmas_type="sigma_min",
+        lower_order_final=True
+    )
 
     rk1 = RungeKuttaScheduler(num_train_timesteps=1000, timestep_schedule="linear", order=1, use_order_scheduling=False)
     rk2 = RungeKuttaScheduler(num_train_timesteps=1000, timestep_schedule="linear", order=2, use_order_scheduling=False)
@@ -191,6 +205,7 @@ if __name__ == "__main__":
     DDPM_pipe = CustomDiffusionPipeline(unet=eps_unet, scheduler=DDPM).to("cuda", local_rank)
     DDIM_pipe = CustomDiffusionPipeline(unet=eps_unet, scheduler=DDIM).to("cuda", local_rank)
     DPMSolver_pipe = CustomDiffusionPipeline(unet=eps_unet, scheduler=DPMSolver).to("cuda", local_rank)
+    DPMComposed_pipe = CustomDiffusionPipeline(unet=eps_unet, scheduler=DPMComposed).to("cuda", local_rank)
 
     rk1_pipe = RungeKuttaPipeline(unet=eps_unet, scheduler=rk1).to("cuda", local_rank)
     rk2_pipe = RungeKuttaPipeline(unet=eps_unet, scheduler=rk2).to("cuda", local_rank)
@@ -250,6 +265,7 @@ if __name__ == "__main__":
         "DDPM": DDPM_pipe,
         "DDIM": DDIM_pipe,
         "DPMSolver": DPMSolver_pipe,
+        "DPMComposed": DPMComposed_pipe,
 
         "RK1": rk1_pipe,
         "RK2": rk2_pipe,
