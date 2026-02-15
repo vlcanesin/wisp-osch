@@ -4,14 +4,9 @@ The code in this repository can be used to calculate the FID scores of different
 - The solvers are all implemented in this [fork](https://github.com/vlcanesin/rk-diffusers). In order to install it, you can clone the repo and install the library in your environment using `pip install -e .`
 - Once the library is installed, you'll be able to execute `evaluation.py`, the main evaluation script.
 
-## Introduced Solvers 
-Inside `./diffusers/schedulers`
-- `scheduling_runge_kutta.py`: RungeKuttaScheduler, fixed-step solvers of order p=1..4, `edm` time scheduler, `solver order scheduler`
-- `scheduling_adaptive_runge_kutta.py`: AdaptiveHeunScheduler, p=2
-- `scheduling_parallel_runge_kutta.py`: ParallelRungeKuttaScheduler solvers of order p=1..4, with approximation of `x` to make them parallelizable.
-- `scheduling_exp_runge_kutta.py`: ExpRungeKuttaScheduler of order p=4,5 from the paper (experimental version)
-- `scheduling_dpm_adaptive_ringe_kutta.py`: DPMAdaptiveHeunScheduler, based on adaptive step size selection as in DPM paper with Heun scheduler solver (experimental version)
-- `schseduling_dpm_runge_kutta.py`: DPMRungeKuttaScheduler, RK solver of order p=4, it uses ODE formulation (2.2, 2.3) from DPM solver paper (experimental, didn't work for some reason)
+## Introduced Solvers
+
+Checkout the [fork](https://github.com/vlcanesin/rk-diffusers) for more information.
   
 ## Requirements
 
@@ -41,7 +36,7 @@ torchvision.datasets.CIFAR10(root="/beegfs/vrosadac/datasets/cifar10", train=Tru
 The `evaluation.py` script runs distributedly across different GPUs and is designed to run with `torchrun`. It accepts a list of parameters:
 1. `--solvers` : the solvers/schedulers to be evaluated. The following strings are allowed:
 ```
-DDPM, DDIM, DPMSolver, RK1, RK2, RK3, RK4, RKEDM, RKcomp, pRK2, pRK3, pRK4, ExpRK4, ExpRK5
+DDPM, DDIM, DPMSolver, DPMEDM, DPMComposed, DPMEDMComposed, DPMEDMComposed_high, RK1, RK2, RK3, RK4, RKEDM1, RKEDM2, RKEDM3, RKEDM, RKfEDM1, RKfEDM2, RKfEDM3, RKfEDM, RKcomp, RKEDMcomp, RKEDMcomp_high, RKfEDMcomp, RKfEDMcomp_high, pRK2, pRK3, pRK4, pRKEDM2, pRKEDM3, pRKEDM4, ExpRK4, ExpRK5, ExpRK4_mid, ExpRK4_simp, ExpRK5_mid, ExpRK5_simp, ExpRKEDM4, ExpRKEDM5, ExpRKEDM4_mid, ExpRKEDM4_simp, ExpRKEDM5_mid, ExpRKEDM5_simp
 ```
 2. `--steps` : the number of denoising steps each solver will be evaluated on.
 3. `--dataset` : the dataset (and consequently the model) used for the evaluation. Can be one of the following: `CIFAR10` or `LSUN-bedroom`
@@ -49,6 +44,7 @@ DDPM, DDIM, DPMSolver, RK1, RK2, RK3, RK4, RKEDM, RKcomp, pRK2, pRK3, pRK4, ExpR
 5. `--csvdir` : the directory of the CSV output file containing the statistics (defaults to `./csv`)
 6. `--modelpath` : the path to the cached model
 7. `--datapath` : the path to the cached dataset
+8. `--model` : which model architecture to use (SimpleUNet, UNet2DModel - diffusers, DiT-S/4)
 
 This is an example of a valid command:
 ```
