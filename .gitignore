@@ -4,3 +4,4 @@ lsun
 cifar10
 csv
 ddpm_ema_cifar10
+*.pt
