@@ -1,4 +1,6 @@
-# FID-diffusers
+# Optimizing Diffusion ODE Solvers via Within-Step Parallelism and Order Composition
+
+This is an original repository to reproduce experiments from the [ICLR'26 DeLTA workshop paper (oral)](https://openreview.net/forum?id=jjnOuUjtbW&referrer=%5Bthe%20profile%20of%20Julia%20Gusak%5D(%2Fprofile%3Fid%3D~Julia_Gusak1))
 
 The code in this repository can be used to calculate the FID scores of different diffusion pipelines based on custom schedulers.
 - The solvers are all implemented in this [fork](https://github.com/vlcanesin/rk-diffusers). In order to install it, you can clone the repo and install the library in your environment using `pip install -e .`
@@ -49,4 +51,16 @@ DDPM, DDIM, DPMSolver, DPMEDM, DPMComposed, DPMEDMComposed, DPMEDMComposed_high,
 This is an example of a valid command:
 ```
 torchrun --nnodes=1 --nproc-per-node=2 evaluation.py --solvers DDPM DDIM --steps 100 200 500 --dataset LSUN-bedroom --bsize 16 --modelpath ./ddpm-bedroom-256 --datapath ./lsun
+```
+
+## Citation
+
+If you use this project in your research, please cite:
+
+```
+@inproceedings{canesin2026optimizing,
+  title={Optimizing Diffusion ODE Solvers via Within-Step Parallelism and Order Composition},
+  author={Canesin, V{\'\i}ctor Lucas Rosada and Gusak, Julia},
+  booktitle={ICLR 2026 2nd Workshop on Deep Generative Model in Machine Learning: Theory, Principle and Efficacy}
+}
 ```
