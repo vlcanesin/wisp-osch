@@ -1,3 +1,12 @@
+# Licence: MIT
+# @misc{cifar10-diffusion-2025,
+#     title={CIFAR-10 Diffusion Model: Fast Training Implementation},
+#     author={Karthik},
+#     year={2025},
+#     publisher={Hugging Face},
+#     howpublished={\url{https://huggingface.co/karthik-2905/DiffusionPretrained}}
+# }
+
 import math
 import torch
 import torch.nn as nn

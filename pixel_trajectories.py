@@ -15,11 +15,8 @@ from diffusers import (
     ExpRungeKuttaScheduler
 )
 
-from SimpleUNet import SimpleUNet
-
-import sys
-sys.path.append("DiT-CIFAR10")
-from models import DiT_models
+from models.SimpleUNet import SimpleUNet
+from models.DiT import DiT_models
 
 # Supported solvers per schedule
 SCHEDULE_SUPPORT = {
