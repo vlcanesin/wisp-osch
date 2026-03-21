@@ -6,6 +6,8 @@ The code in this repository can be used to calculate the FID scores of different
 - The solvers are all implemented in this [fork](https://github.com/vlcanesin/rk-diffusers). In order to install it, you can clone the repo and install the library in your environment using `pip install -e .`
 - Once the library is installed, you'll be able to execute `evaluation.py`, the main evaluation script.
 
+Additionally, the code for plotting the evolution of trajectory differences is provided in the `trajectories` directory. Additional details on the models used can be found on the paper.
+
 ## Introduced Solvers
 
 Checkout the [fork](https://github.com/vlcanesin/diffusers) for more information.
