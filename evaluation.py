@@ -4,16 +4,15 @@ import torch
 from torch.utils.data import DataLoader
 import torch.distributed as dist
 
-# Local version of the diffusers library
 from diffusers import (
     UNet2DModel, 
     RungeKuttaScheduler, 
     DDPMScheduler, 
     DDIMScheduler, 
     DPMSolverSinglestepScheduler, 
-    ParallelRungeKuttaScheduler, 
+    WiSPRungeKuttaScheduler, 
     ExpRungeKuttaScheduler,
-    DPMSolverComposedScheduler
+    DPMSolverOSchScheduler
 )
 
 import torch.nn.functional as F
@@ -190,7 +189,7 @@ def nfe_to_steps(solver_name, nfe, solver_obj=None):
     Convert NFE to num_inference_steps, using predefined factors
     and solver-specific methods if available.
     
-    solver_name: str, e.g., "DPMComposed", "RK3", "DDIM", etc.
+    solver_name: str, e.g., "DPMOSch", "RK3", "DDIM", etc.
     nfe: int, number of inference nfe
     solver_obj: the instantiated scheduler/solver object (optional)
     """
@@ -199,9 +198,9 @@ def nfe_to_steps(solver_name, nfe, solver_obj=None):
         "DDIM": 1,
         "DPMSolver": 1,
         "DPMEDM": 1,
-        "DPMComposed": None,
-        "DPMEDMComposed": None,
-        "DPMEDMComposed_high": None,
+        "DPMOSch": None,
+        "DPMEDMOSch": None,
+        "DPMEDMOSch_high": None,
         "RK1": 1,
         "RK2": 1/2,
         "RK3": 1/3,
@@ -214,17 +213,17 @@ def nfe_to_steps(solver_name, nfe, solver_obj=None):
         "RKfEDM2": 1/2,
         "RKfEDM3": 1/3,
         "RKfEDM": 1/4,
-        "RKEDMcomp": None,
-        "RKEDMcomp_high": None,
-        "RKcomp": None,
+        "RKEDMOSch": None,
+        "RKEDMOSch_high": None,
+        "RKOSch": None,
         "RKfEDMcomp": None,
         "RKfEDMcomp_high": None,
-        "pRK2": 1,
-        "pRK3": 1,
-        "pRK4": 1,
-        "pRKEDM2": 1,
-        "pRKEDM3": 1,
-        "pRKEDM4": 1,
+        "WiSPRK2": 1,
+        "WiSPRK3": 1,
+        "WiSPRK4": 1,
+        "WiSPRKEDM2": 1,
+        "WiSPRKEDM3": 1,
+        "WiSPRKEDM4": 1,
         "ExpRK4": 1/4,
         "ExpRK5": 1/5,
         "ExpRK4_mid": 1/4,
@@ -256,7 +255,7 @@ def steps_to_nfe(solver_name, steps, solver_obj=None):
     Convert num_inference_steps to NFE, using predefined factors
     and solver-specific methods if available.
     
-    solver_name: str, e.g., "DPMComposed", "RK3", "DDIM", etc.
+    solver_name: str, e.g., "DPMOSch", "RK3", "DDIM", etc.
     steps: int, number of inference steps
     solver_obj: the instantiated scheduler/solver object (optional)
     """
@@ -265,9 +264,9 @@ def steps_to_nfe(solver_name, steps, solver_obj=None):
         "DDIM": 1,
         "DPMSolver": 1,
         "DPMEDM": 1,
-        "DPMComposed": None,
-        "DPMEDMComposed": None,
-        "DPMEDMComposed_high": None,
+        "DPMOSch": None,
+        "DPMEDMOSch": None,
+        "DPMEDMOSch_high": None,
         "RK1": 1,
         "RK2": 2,
         "RK3": 3,
@@ -280,17 +279,17 @@ def steps_to_nfe(solver_name, steps, solver_obj=None):
         "RKfEDM2": 2,
         "RKfEDM3": 3,
         "RKfEDM": 4,
-        "RKEDMcomp": None,
-        "RKEDMcomp_high": None,
-        "RKcomp": None,
+        "RKEDMOSch": None,
+        "RKEDMOSch_high": None,
+        "RKOSch": None,
         "RKfEDMcomp": None,
         "RKfEDMcomp_high": None,
-        "pRK2": 1,
-        "pRK3": 1,
-        "pRK4": 1,
-        "pRKEDM2": 1,
-        "pRKEDM3": 1,
-        "pRKEDM4": 1,
+        "WiSPRK2": 1,
+        "WiSPRK3": 1,
+        "WiSPRK4": 1,
+        "WiSPRKEDM2": 1,
+        "WiSPRKEDM3": 1,
+        "WiSPRKEDM4": 1,
         "ExpRK4": 4,
         "ExpRK5": 5,
         "ExpRK4_mid": 4,
@@ -372,25 +371,25 @@ if __name__ == "__main__":
         lower_order_final=True, use_karras_sigmas=True
     )
     
-    DPMComposed = DPMSolverComposedScheduler(
+    DPMOSch = DPMSolverOSchScheduler(
         num_train_timesteps=1000, prediction_type="epsilon",
         solver_order=3, algorithm_type="dpmsolver", final_sigmas_type="sigma_min",
         lower_order_final=True
     )
 
-    DPMEDMComposed = DPMSolverComposedScheduler(
+    DPMEDMOSch = DPMSolverOSchScheduler(
         num_train_timesteps=1000, prediction_type="epsilon",
         solver_order=3, algorithm_type="dpmsolver", final_sigmas_type="sigma_min",
         lower_order_final=True, use_karras_sigmas=True
     )
-    DPMEDMComposed.set_composition_mode("edm")
+    DPMEDMOSch.set_scheduling_mode("edm")
 
-    DPMEDMComposed_high = DPMSolverComposedScheduler(
+    DPMEDMOSch_high = DPMSolverOSchScheduler(
         num_train_timesteps=1000, prediction_type="epsilon",
         solver_order=3, algorithm_type="dpmsolver", final_sigmas_type="sigma_min",
         lower_order_final=True, use_karras_sigmas=True
     )
-    DPMEDMComposed_high.set_composition_mode("edm-high")
+    DPMEDMOSch_high.set_scheduling_mode("edm-high")
 
     rk1 = RungeKuttaScheduler(num_train_timesteps=1000, timestep_schedule="linear", order=1, use_order_scheduling=False)
     rk2 = RungeKuttaScheduler(num_train_timesteps=1000, timestep_schedule="linear", order=2, use_order_scheduling=False)
@@ -407,19 +406,19 @@ if __name__ == "__main__":
     RKfEDM3 = RungeKuttaScheduler(num_train_timesteps=1000, timestep_schedule="fake-edm-original", order=3, use_order_scheduling=False)
     RKfEDM = RungeKuttaScheduler(num_train_timesteps=1000, timestep_schedule="fake-edm-original", order=4, use_order_scheduling=False)
 
-    RKcomp = RungeKuttaScheduler(num_train_timesteps=1000, timestep_schedule="linear", use_order_scheduling=True) 
-    RKEDMcomp = RungeKuttaScheduler(num_train_timesteps=1000, timestep_schedule="edm", use_order_scheduling=True)
-    RKEDMcomp_high = RungeKuttaScheduler(num_train_timesteps=1000, timestep_schedule="edm-high", use_order_scheduling=True)
+    RKOSch = RungeKuttaScheduler(num_train_timesteps=1000, timestep_schedule="linear", use_order_scheduling=True) 
+    RKEDMOSch = RungeKuttaScheduler(num_train_timesteps=1000, timestep_schedule="edm", use_order_scheduling=True)
+    RKEDMOSch_high = RungeKuttaScheduler(num_train_timesteps=1000, timestep_schedule="edm-high", use_order_scheduling=True)
 
     RKfEDMcomp = RungeKuttaScheduler(num_train_timesteps=1000, timestep_schedule="fake-edm-original", use_order_scheduling=True)
     RKfEDMcomp_high = RungeKuttaScheduler(num_train_timesteps=1000, timestep_schedule="fake-edm-high", use_order_scheduling=True)
 
-    pRK2 = ParallelRungeKuttaScheduler(num_train_timesteps=1000, order=2)
-    pRK3 = ParallelRungeKuttaScheduler(num_train_timesteps=1000, order=3)
-    pRK4 = ParallelRungeKuttaScheduler(num_train_timesteps=1000, order=4)
-    pRKEDM2 = ParallelRungeKuttaScheduler(num_train_timesteps=1000, order=2, timestep_schedule="edm")
-    pRKEDM3 = ParallelRungeKuttaScheduler(num_train_timesteps=1000, order=3, timestep_schedule="edm")
-    pRKEDM4 = ParallelRungeKuttaScheduler(num_train_timesteps=1000, order=4, timestep_schedule="edm")
+    WiSPRK2 = WiSPRungeKuttaScheduler(num_train_timesteps=1000, order=2)
+    WiSPRK3 = WiSPRungeKuttaScheduler(num_train_timesteps=1000, order=3)
+    WiSPRK4 = WiSPRungeKuttaScheduler(num_train_timesteps=1000, order=4)
+    WiSPRKEDM2 = WiSPRungeKuttaScheduler(num_train_timesteps=1000, order=2, timestep_schedule="edm")
+    WiSPRKEDM3 = WiSPRungeKuttaScheduler(num_train_timesteps=1000, order=3, timestep_schedule="edm")
+    WiSPRKEDM4 = WiSPRungeKuttaScheduler(num_train_timesteps=1000, order=4, timestep_schedule="edm")
 
     ExpRK4 = ExpRungeKuttaScheduler(num_train_timesteps=1000, order=4)
     ExpRK5 = ExpRungeKuttaScheduler(num_train_timesteps=1000, order=5)
@@ -443,9 +442,9 @@ if __name__ == "__main__":
     
     DPMSolver_pipe = CustomDiffusionPipeline(model=eps_model, scheduler=DPMSolver).to("cuda", local_rank)
     DPMEDM_pipe = CustomDiffusionPipeline(model=eps_model, scheduler=DPMEDM).to("cuda", local_rank)
-    DPMComposed_pipe = CustomDiffusionPipeline(model=eps_model, scheduler=DPMComposed).to("cuda", local_rank) 
-    DPMEDMComposed_pipe = CustomDiffusionPipeline(model=eps_model, scheduler=DPMEDMComposed).to("cuda", local_rank)
-    DPMEDMComposed_high_pipe = CustomDiffusionPipeline(model=eps_model, scheduler=DPMEDMComposed_high).to("cuda", local_rank)
+    DPMOSch_pipe = CustomDiffusionPipeline(model=eps_model, scheduler=DPMOSch).to("cuda", local_rank) 
+    DPMEDMOSch_pipe = CustomDiffusionPipeline(model=eps_model, scheduler=DPMEDMOSch).to("cuda", local_rank)
+    DPMEDMOSch_high_pipe = CustomDiffusionPipeline(model=eps_model, scheduler=DPMEDMOSch_high).to("cuda", local_rank)
 
     rk1_pipe = RungeKuttaPipeline(model=eps_model, scheduler=rk1).to("cuda", local_rank)
     rk2_pipe = RungeKuttaPipeline(model=eps_model, scheduler=rk2).to("cuda", local_rank)
@@ -461,19 +460,19 @@ if __name__ == "__main__":
     RKfEDM3_pipe = RungeKuttaPipeline(model=eps_model, scheduler=RKfEDM3).to("cuda", local_rank)
     RKfEDM_pipe = RungeKuttaPipeline(model=eps_model, scheduler=RKfEDM).to("cuda", local_rank)
 
-    RKcomp_pipe = RungeKuttaPipeline(model=eps_model, scheduler=RKcomp).to("cuda", local_rank)
-    RKEDMcomp_pipe = RungeKuttaPipeline(model=eps_model, scheduler=RKEDMcomp).to("cuda", local_rank)
-    RKEDMcomp_high_pipe = RungeKuttaPipeline(model=eps_model, scheduler=RKEDMcomp_high).to("cuda", local_rank)
+    RKOSch_pipe = RungeKuttaPipeline(model=eps_model, scheduler=RKOSch).to("cuda", local_rank)
+    RKEDMOSch_pipe = RungeKuttaPipeline(model=eps_model, scheduler=RKEDMOSch).to("cuda", local_rank)
+    RKEDMOSch_high_pipe = RungeKuttaPipeline(model=eps_model, scheduler=RKEDMOSch_high).to("cuda", local_rank)
 
     RKfEDMcomp_pipe = RungeKuttaPipeline(model=eps_model, scheduler=RKfEDMcomp).to("cuda", local_rank)
     RKfEDMcomp_high_pipe = RungeKuttaPipeline(model=eps_model, scheduler=RKfEDMcomp_high).to("cuda", local_rank)
 
-    pRK2_pipe = RungeKuttaPipeline(model=eps_model, scheduler=pRK2).to("cuda", local_rank)
-    pRK3_pipe = RungeKuttaPipeline(model=eps_model, scheduler=pRK3).to("cuda", local_rank)
-    pRK4_pipe = RungeKuttaPipeline(model=eps_model, scheduler=pRK4).to("cuda", local_rank)
-    pRKEDM2_pipe = RungeKuttaPipeline(model=eps_model, scheduler=pRKEDM2).to("cuda", local_rank)
-    pRKEDM3_pipe = RungeKuttaPipeline(model=eps_model, scheduler=pRKEDM3).to("cuda", local_rank)
-    pRKEDM4_pipe = RungeKuttaPipeline(model=eps_model, scheduler=pRKEDM4).to("cuda", local_rank)
+    WiSPRK2_pipe = RungeKuttaPipeline(model=eps_model, scheduler=WiSPRK2).to("cuda", local_rank)
+    WiSPRK3_pipe = RungeKuttaPipeline(model=eps_model, scheduler=WiSPRK3).to("cuda", local_rank)
+    WiSPRK4_pipe = RungeKuttaPipeline(model=eps_model, scheduler=WiSPRK4).to("cuda", local_rank)
+    WiSPRKEDM2_pipe = RungeKuttaPipeline(model=eps_model, scheduler=WiSPRKEDM2).to("cuda", local_rank)
+    WiSPRKEDM3_pipe = RungeKuttaPipeline(model=eps_model, scheduler=WiSPRKEDM3).to("cuda", local_rank)
+    WiSPRKEDM4_pipe = RungeKuttaPipeline(model=eps_model, scheduler=WiSPRKEDM4).to("cuda", local_rank)
 
     ExpRK4_pipe = RungeKuttaPipeline(model=eps_model, scheduler=ExpRK4).to("cuda", local_rank)
     ExpRK5_pipe = RungeKuttaPipeline(model=eps_model, scheduler=ExpRK5).to("cuda", local_rank)
@@ -529,9 +528,9 @@ if __name__ == "__main__":
 
         "DPMSolver": DPMSolver_pipe,
         "DPMEDM": DPMEDM_pipe,
-        "DPMComposed": DPMComposed_pipe,
-        "DPMEDMComposed": DPMEDMComposed_pipe, 
-        "DPMEDMComposed_high": DPMEDMComposed_high_pipe, 
+        "DPMOSch": DPMOSch_pipe,
+        "DPMEDMOSch": DPMEDMOSch_pipe, 
+        "DPMEDMOSch_high": DPMEDMOSch_high_pipe, 
 
         "RK1": rk1_pipe,
         "RK2": rk2_pipe,
@@ -547,19 +546,19 @@ if __name__ == "__main__":
         "RKfEDM3": RKfEDM3_pipe,
         "RKfEDM": RKfEDM_pipe,
 
-        "RKcomp": RKcomp_pipe,
-        "RKEDMcomp": RKEDMcomp_pipe,
-        "RKEDMcomp_high": RKEDMcomp_high_pipe,
+        "RKOSch": RKOSch_pipe,
+        "RKEDMOSch": RKEDMOSch_pipe,
+        "RKEDMOSch_high": RKEDMOSch_high_pipe,
 
         "RKfEDMcomp": RKfEDMcomp_pipe,
         "RKfEDMcomp_high": RKfEDMcomp_high_pipe,
 
-        "pRK2": pRK2_pipe,
-        "pRK3": pRK3_pipe,
-        "pRK4": pRK4_pipe,
-        "pRKEDM2": pRKEDM2_pipe,
-        "pRKEDM3": pRKEDM3_pipe,
-        "pRKEDM4": pRKEDM4_pipe,
+        "WiSPRK2": WiSPRK2_pipe,
+        "WiSPRK3": WiSPRK3_pipe,
+        "WiSPRK4": WiSPRK4_pipe,
+        "WiSPRKEDM2": WiSPRKEDM2_pipe,
+        "WiSPRKEDM3": WiSPRKEDM3_pipe,
+        "WiSPRKEDM4": WiSPRKEDM4_pipe,
 
         "ExpRK4": ExpRK4_pipe,
         "ExpRK5": ExpRK5_pipe,

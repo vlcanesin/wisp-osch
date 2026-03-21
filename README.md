@@ -1,4 +1,4 @@
-# Optimizing Diffusion ODE Solvers via Within-Step Parallelism and Order Composition
+# WiSP-OSch: Optimizing Diffusion ODE Sampling with Solver Within-Step Parallelism and Order Scheduling
 
 This is an original repository to reproduce experiments from the [ICLR'26 DeLTA workshop paper (oral)](https://openreview.net/forum?id=jjnOuUjtbW&referrer=%5Bthe%20profile%20of%20Julia%20Gusak%5D(%2Fprofile%3Fid%3D~Julia_Gusak1))
 
@@ -8,7 +8,7 @@ The code in this repository can be used to calculate the FID scores of different
 
 ## Introduced Solvers
 
-Checkout the [fork](https://github.com/vlcanesin/rk-diffusers) for more information.
+Checkout the [fork](https://github.com/vlcanesin/diffusers) for more information.
   
 ## Requirements
 
@@ -40,7 +40,7 @@ The `evaluation.py` script runs distributedly across different GPUs and is desig
 ```
 DDPM, DDIM, DPMSolver, DPMEDM, DPMComposed, DPMEDMComposed, DPMEDMComposed_high, RK1, RK2, RK3, RK4, RKEDM1, RKEDM2, RKEDM3, RKEDM, RKfEDM1, RKfEDM2, RKfEDM3, RKfEDM, RKcomp, RKEDMcomp, RKEDMcomp_high, RKfEDMcomp, RKfEDMcomp_high, pRK2, pRK3, pRK4, pRKEDM2, pRKEDM3, pRKEDM4, ExpRK4, ExpRK5, ExpRK4_mid, ExpRK4_simp, ExpRK5_mid, ExpRK5_simp, ExpRKEDM4, ExpRKEDM5, ExpRKEDM4_mid, ExpRKEDM4_simp, ExpRKEDM5_mid, ExpRKEDM5_simp
 ```
-2. `--steps` : the number of denoising steps each solver will be evaluated on.
+2. `--nfes` : the NFE (number of function evaluations) each solver will execute for the denoising
 3. `--dataset` : the dataset (and consequently the model) used for the evaluation. Can be one of the following: `CIFAR10` or `LSUN-bedroom`
 4. `--bsize` : the batch size used for each GPU
 5. `--csvdir` : the directory of the CSV output file containing the statistics (defaults to `./csv`)
@@ -50,7 +50,7 @@ DDPM, DDIM, DPMSolver, DPMEDM, DPMComposed, DPMEDMComposed, DPMEDMComposed_high,
 
 This is an example of a valid command:
 ```
-torchrun --nnodes=1 --nproc-per-node=2 evaluation.py --solvers DDPM DDIM --steps 100 200 500 --dataset LSUN-bedroom --bsize 16 --modelpath ./ddpm-bedroom-256 --datapath ./lsun
+torchrun --nnodes=1 --nproc-per-node=2 evaluation.py --solvers DDPM DDIM --nfes 100 200 500 --dataset LSUN-bedroom --bsize 16 --modelpath ./ddpm-bedroom-256 --datapath ./lsun
 ```
 
 ## Citation
@@ -59,7 +59,7 @@ If you use this project in your research, please cite:
 
 ```
 @inproceedings{canesin2026optimizing,
-  title={Optimizing Diffusion ODE Solvers via Within-Step Parallelism and Order Composition},
+  title={WiSP-OSch: Optimizing Diffusion ODE Sampling with Solver Within-Step Parallelism and Order Scheduling},
   author={Canesin, V{\'\i}ctor Lucas Rosada and Gusak, Julia},
   booktitle={ICLR 2026 2nd Workshop on Deep Generative Model in Machine Learning: Theory, Principle and Efficacy}
 }
