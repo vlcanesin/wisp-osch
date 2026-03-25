@@ -1,4 +1,4 @@
-# WiSP-OSch: Optimizing Diffusion ODE Sampling with Solver Within-Step Parallelism and Order Scheduling
+# WiSP-OSch: Solver Within-Step Parallelism and Order Scheduling for Diffusion Sampling
 
 This is an original repository to reproduce experiments from the [ICLR'26 DeLTA workshop paper (oral)](https://openreview.net/forum?id=jjnOuUjtbW&referrer=%5Bthe%20profile%20of%20Julia%20Gusak%5D(%2Fprofile%3Fid%3D~Julia_Gusak1))
 
@@ -61,7 +61,7 @@ If you use this project in your research, please cite:
 
 ```
 @inproceedings{canesin2026optimizing,
-  title={WiSP-OSch: Optimizing Diffusion ODE Sampling with Solver Within-Step Parallelism and Order Scheduling},
+  title={WiSP-OSch: Solver Within-Step Parallelism and Order Scheduling for Diffusion Sampling},
   author={Canesin, V{\'\i}ctor Lucas Rosada and Gusak, Julia},
   booktitle={ICLR 2026 2nd Workshop on Deep Generative Model in Machine Learning: Theory, Principle and Efficacy}
 }
