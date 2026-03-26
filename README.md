@@ -1,6 +1,6 @@
 # WiSP-OSch: Solver Within-Step Parallelism and Order Scheduling for Diffusion Sampling
 
-This is an original repository to reproduce experiments from the [ICLR'26 DeLTA workshop paper (oral)](https://openreview.net/forum?id=jjnOuUjtbW&referrer=%5Bthe%20profile%20of%20Julia%20Gusak%5D(%2Fprofile%3Fid%3D~Julia_Gusak1))
+This is an original repository to reproduce experiments from the [ICLR'26 DeLTA workshop paper (oral)](https://openreview.net/forum?id=jjnOuUjtbW&referrer=%5Bthe%20profile%20of%20Julia%20Gusak%5D(%2Fprofile%3Fid%3D~Julia_Gusak1)) [[hal](https://hal.science/hal-05567449)]
 
 The code in this repository can be used to calculate the FID scores of different diffusion pipelines based on custom schedulers.
 - The solvers are all implemented in this [fork](https://github.com/vlcanesin/rk-diffusers). In order to install it, you can clone the repo and install the library in your environment using `pip install -e .`
