@@ -10,7 +10,7 @@ Additionally, the code for plotting the evolution of trajectory differences is p
 
 ## Introduced Solvers
 
-Checkout the [fork](https://github.com/vlcanesin/diffusers) for more information.
+Checkout the [Diffusers fork](https://github.com/vlcanesin/diffusers) for more information.
   
 ## Requirements
 
@@ -20,7 +20,7 @@ Checkout the [fork](https://github.com/vlcanesin/diffusers) for more information
 python -m venv my-venv
 source my-venv/bin/activate
 
-# cd FID-diffusers
+# cd wisp-osh
 pip install -r requirements.txt
 ```
 
@@ -60,9 +60,10 @@ torchrun --nnodes=1 --nproc-per-node=2 evaluation.py --solvers DDPM DDIM --nfes 
 If you use this project in your research, please cite:
 
 ```
-@inproceedings{canesin2026optimizing,
+@inproceedings{canesin2026wisp,
   title={WiSP-OSch: Solver Within-Step Parallelism and Order Scheduling for Diffusion Sampling},
   author={Canesin, V{\'\i}ctor Lucas Rosada and Gusak, Julia},
-  booktitle={ICLR 2026 2nd Workshop on Deep Generative Model in Machine Learning: Theory, Principle and Efficacy}
-}
+  booktitle={ICLR 2026 2nd Workshop on Deep Generative Model in Machine Learning: Theory, Principle and Efficacy-Fourteenth International Conference on Learning Representation},
+  year={2026}
+
 ```
